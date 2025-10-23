@@ -1,16 +1,12 @@
 ﻿using InventoryApp.Domain;
 using InventoryApp.Repositories;
-using System.Data;
+using System.Windows.Forms;
 
 namespace InventoryApp.WinForms
 {
     public partial class ProductsInlineForm : Form
     {
         private readonly IProductRepository _productRepo;
-
-        private DataTable _table = new();
-        private readonly BindingSource _bs = new();
-        private bool _persisting = false;
 
         public ProductsInlineForm(IProductRepository productRepo)
         {
@@ -20,339 +16,266 @@ namespace InventoryApp.WinForms
 
         private async void ProductsInlineForm_Load(object sender, EventArgs e)
         {
-            await LoadTableAsync();
-            SetupGrid();
-            SetupContextMenu();
-
-            // Validaciones y errores
-            dataGridProducts.CellValidating += dataGridProducts_CellValidating;
-            dataGridProducts.DataError += (s, ev) => { ev.ThrowException = false; };
-
-            // Persistencia inmediata por celda (más estable que RowValidated)
-            dataGridProducts.CellValidated += dataGridProducts_CellValidated;
-
-
-
-            // DELETE con tecla Supr
-            dataGridProducts.UserDeletingRow += dataGridProducts_UserDeletingRow;
+            await LoadProductsAsync();
+            SetupDataGridView();
+            AgregarBotones(); // Agregar botones Editar y Eliminar
+            AplicarEstilosVisuales();
         }
 
-        // ================================
-        // Carga de datos
-        // ================================
-        private async System.Threading.Tasks.Task LoadTableAsync()
+        private async Task LoadProductsAsync()
         {
-            _table = BuildSchema();
-
-            var productos = await _productRepo.GetAllAsync();
-            foreach (var p in productos)
+            try
             {
-                var r = _table.NewRow();
-                r["id"] = p.Id;
-                r["nombre"] = p.Nombre;
-                r["precio"] = p.Precio;
-                r["stock"] = p.Stock;
-                _table.Rows.Add(r);
+                dgvProducts.Rows.Clear();
+                var products = await _productRepo.GetAllAsync();
+                foreach (var product in products)
+                {
+                    int rowIndex = dgvProducts.Rows.Add(
+                        product.Id,
+                        product.Nombre,
+                        product.Precio,
+                        product.Stock
+                    );
+                    dgvProducts.Rows[rowIndex].Tag = product;
+                }
             }
-
-            _table.AcceptChanges();
-            _bs.DataSource = _table;
-            dataGridProducts.DataSource = _bs;
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al cargar productos: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
-        private static DataTable BuildSchema()
+        private void SetupDataGridView()
         {
-            var t = new DataTable("producto");
-
-            var cId = t.Columns.Add("id", typeof(int));
-            cId.AllowDBNull = true;   // filas nuevas sin id
-            cId.Unique = false;       // no PK aquí (evita problemas con nulos)
-
-            t.Columns.Add("nombre", typeof(string));
-            t.Columns.Add("precio", typeof(decimal));
-            t.Columns.Add("stock", typeof(int));
-
-            return t;
+            dgvProducts.Columns["Id"].ReadOnly = true;
+            dgvProducts.Columns["Precio"].DefaultCellStyle.Format = "N2";
+            dgvProducts.CellEndEdit += DgvProducts_CellEndEdit;
+            dgvProducts.CellClick += DgvProducts_CellClick;
+            dgvProducts.UserDeletingRow += DgvProducts_UserDeletingRow;
+            dgvProducts.CellValidating += DgvProducts_CellValidating;
         }
 
-        // ================================
-        // Configuración visual
-        // ================================
-        private void SetupGrid()
+        // Botones dentro del DataGridView
+        private void AgregarBotones()
         {
-            dataGridProducts.AutoGenerateColumns = true;
-            dataGridProducts.AllowUserToAddRows = true;
-            dataGridProducts.AllowUserToDeleteRows = true;
-            dataGridProducts.MultiSelect = false;
-            dataGridProducts.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dataGridProducts.EditMode = DataGridViewEditMode.EditOnKeystrokeOrF2;
-            dataGridProducts.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            if (dgvProducts.Columns["Editar"] == null)
+            {
+                DataGridViewButtonColumn editButton = new DataGridViewButtonColumn();
+                editButton.HeaderText = "Editar";
+                editButton.Text = "✏️ Editar";
+                editButton.Name = "Editar";
+                editButton.UseColumnTextForButtonValue = true;
+                editButton.Width = 90;
+                dgvProducts.Columns.Add(editButton);
+            }
 
-            if (dataGridProducts.Columns["id"] is DataGridViewColumn idCol)
+            if (dgvProducts.Columns["Eliminar"] == null)
             {
-                idCol.HeaderText = "ID";
-                idCol.ReadOnly = true;  // lo pone la BD
-                idCol.Width = 70;
-            }
-            if (dataGridProducts.Columns["nombre"] is DataGridViewColumn nomCol)
-            {
-                nomCol.HeaderText = "Nombre";
-                nomCol.ReadOnly = false;
-            }
-            if (dataGridProducts.Columns["precio"] is DataGridViewColumn preCol)
-            {
-                preCol.HeaderText = "Precio";
-                preCol.DefaultCellStyle.Format = "N2";
-                preCol.ReadOnly = false;
-            }
-            if (dataGridProducts.Columns["stock"] is DataGridViewColumn stkCol)
-            {
-                stkCol.HeaderText = "Stock";
-                stkCol.ReadOnly = false;
+                DataGridViewButtonColumn deleteButton = new DataGridViewButtonColumn();
+                deleteButton.HeaderText = "Eliminar";
+                deleteButton.Text = "🗑️ Eliminar";
+                deleteButton.Name = "Eliminar";
+                deleteButton.UseColumnTextForButtonValue = true;
+                deleteButton.Width = 100;
+                dgvProducts.Columns.Add(deleteButton);
             }
         }
 
-        // ================================
-        // Menú contextual (Eliminar)
-        // ================================
-        private void SetupContextMenu()
-        {
-            var ctx = new ContextMenuStrip();
-            var miEliminar = new ToolStripMenuItem("Eliminar");
-
-            miEliminar.Click += async (s, ev) =>
-            {
-                if (dataGridProducts.CurrentRow?.DataBoundItem is not DataRowView drv) return;
-                await DeleteRowAsync(drv, confirm: true);
-            };
-
-            ctx.Items.Add(miEliminar);
-            dataGridProducts.ContextMenuStrip = ctx;
-        }
-
-        // ================================
-        // Validaciones
-        // ================================
-        private void dataGridProducts_CellValidating(object? sender, DataGridViewCellValidatingEventArgs e)
+        private async void DgvProducts_CellClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0) return;
 
-            var colName = dataGridProducts.Columns[e.ColumnIndex].Name;
-            var value = e.FormattedValue?.ToString() ?? "";
+            string colName = dgvProducts.Columns[e.ColumnIndex].Name;
 
-            if (colName == "nombre")
+            if (colName == "Editar")
             {
-                if (string.IsNullOrWhiteSpace(value))
-                {
-                    e.Cancel = true;
-                    dataGridProducts.Rows[e.RowIndex].ErrorText = "El nombre es requerido.";
-                }
-                else dataGridProducts.Rows[e.RowIndex].ErrorText = string.Empty;
+                dgvProducts.BeginEdit(true);
+                MessageBox.Show("Puedes editar los valores directamente en la fila seleccionada.", "Editar producto",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
-            else if (colName == "precio")
+            else if (colName == "Eliminar")
             {
-                if (!decimal.TryParse(value, out var d) || d < 0)
+                var row = dgvProducts.Rows[e.RowIndex];
+                if (row.Cells["Id"].Value == null) return;
+
+                int id = Convert.ToInt32(row.Cells["Id"].Value);
+                var result = MessageBox.Show($"¿Eliminar el producto ID {id}?",
+                    "Confirmar eliminación", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+                if (result == DialogResult.Yes)
                 {
-                    e.Cancel = true;
-                    dataGridProducts.Rows[e.RowIndex].ErrorText = "Precio inválido (>= 0).";
-                }
-                else dataGridProducts.Rows[e.RowIndex].ErrorText = string.Empty;
-            }
-            else if (colName == "stock")
-            {
-                if (!int.TryParse(value, out var q) || q < 0)
-                {
-                    e.Cancel = true;
-                    dataGridProducts.Rows[e.RowIndex].ErrorText = "Stock inválido (>= 0).";
-                }
-                else dataGridProducts.Rows[e.RowIndex].ErrorText = string.Empty;
-            }
-        }
-
-        // ================================
-        // Persistencia inmediata por celda
-        // ================================
-        private async void dataGridProducts_CellValidated(object? sender, DataGridViewCellEventArgs e)
-        {
-            if (_persisting) return;
-            if (e.RowIndex < 0 || e.RowIndex >= dataGridProducts.Rows.Count) return;
-
-            var gridRow = dataGridProducts.Rows[e.RowIndex];
-            if (gridRow.IsNewRow) return;
-
-            // Asegura que lo editado pasó al DataTable
-            dataGridProducts.EndEdit();
-            _bs.EndEdit();
-
-            if (gridRow.DataBoundItem is not DataRowView drv) return;
-            var row = drv.Row;
-
-            // Si la fila está "vacía", no persistimos
-            if (IsNullOrEmpty(row, "nombre") &&
-                IsNullOrZero(row, "precio") &&
-                IsNullOrZero(row, "stock"))
-                return;
-
-            try
-            {
-                _persisting = true;
-
-                // INSERT (id nulo o 0 y fila Added)
-                if ((row.RowState == DataRowState.Added || row["id"] == DBNull.Value || ToInt(row["id"]) == 0)
-                    && IsValidRow(row))
-                {
-                    var p = new Product
+                    bool success = await _productRepo.DeleteAsync(id);
+                    if (success)
                     {
-                        Nombre = row["nombre"]?.ToString() ?? "",
-                        Precio = ToDecimal(row["precio"]),
-                        Stock = ToInt(row["stock"])
-                    };
-
-                    int newId = await _productRepo.InsertAsync(p);
-
-                    row["id"] = newId;
-                    row.AcceptChanges(); // sincroniza estados
-                    return;
-                }
-
-                // UPDATE (id válido y fila Modified)
-                if (row.RowState == DataRowState.Modified && IsValidRow(row))
-                {
-                    int id = ToInt(row["id"]);
-                    if (id > 0)
+                        dgvProducts.Rows.RemoveAt(e.RowIndex);
+                        MessageBox.Show("Producto eliminado exitosamente.", "Éxito",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    else
                     {
-                        var p = new Product
-                        {
-                            Id = id,
-                            Nombre = row["nombre"]?.ToString() ?? "",
-                            Precio = ToDecimal(row["precio"]),
-                            Stock = ToInt(row["stock"])
-                        };
-
-                        var ok = await _productRepo.UpdateAsync(p);
-                        if (ok) row.AcceptChanges();
-                        else row.RowError = "No se pudo actualizar en BD.";
+                        MessageBox.Show("Error al eliminar el producto.", "Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                row.RowError = ex.Message;
-                MessageBox.Show("Error al persistir: " + ex.Message,
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            finally
-            {
-                _persisting = false;
-            }
         }
 
-        // ================================
-        // DELETE (tecla Supr)
-        // ================================
-        private async void dataGridProducts_UserDeletingRow(object? sender, DataGridViewRowCancelEventArgs e)
+        private async void DgvProducts_CellEndEdit(object sender, DataGridViewCellEventArgs e)
         {
-            if (e.Row?.DataBoundItem is not DataRowView drv) return;
-
-            // Confirmación
-            var resp = MessageBox.Show("¿Eliminar este producto?", "Confirmar",
-                MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-            if (resp != DialogResult.Yes) { e.Cancel = true; return; }
-
-            // Ejecuta el borrado real (maneja Added/Existente adentro)
-            var ok = await DeleteRowAsync(drv, confirm: false);
-            if (!ok) e.Cancel = true;
-        }
-
-        // Elimina fila (desde menú o tecla) con protecciones
-        private async System.Threading.Tasks.Task<bool> DeleteRowAsync(DataRowView drv, bool confirm)
-        {
-            if (_persisting) return false;
-
-            var row = drv.Row;
-
             try
             {
-                _persisting = true;
+                if (e.RowIndex < 0) return;
+                var row = dgvProducts.Rows[e.RowIndex];
+                if (row.IsNewRow) return;
 
-                // Si nunca se insertó en BD
-                if (row.RowState == DataRowState.Added || row["id"] == DBNull.Value || ToInt(row["id"]) == 0)
+                var id = Convert.ToInt32(row.Cells["Id"].Value ?? 0);
+                var nombre = row.Cells["Nombre"].Value?.ToString() ?? "";
+                var precioStr = row.Cells["Precio"].Value?.ToString();
+                var stockStr = row.Cells["Stock"].Value?.ToString();
+
+                if (string.IsNullOrWhiteSpace(nombre) ||
+                    string.IsNullOrWhiteSpace(precioStr) ||
+                    string.IsNullOrWhiteSpace(stockStr))
                 {
-                    row.Delete(); // solo quita del DataTable
-                    return true;
+                    return;
                 }
 
-                int id = ToInt(row["id"]);
-                if (id <= 0) return false;
-
-                if (confirm)
+                if (!decimal.TryParse(precioStr, out decimal precioVal) || precioVal < 0)
                 {
-                    var okConf = MessageBox.Show($"¿Eliminar el producto #{id}?", "Confirmar",
-                        MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
-                    if (!okConf) return false;
+                    MessageBox.Show("Precio inválido (debe ser un número >= 0).", "Error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
                 }
 
-                var ok = await _productRepo.DeleteAsync(id);
-                if (ok)
+                if (!int.TryParse(stockStr, out int stockVal) || stockVal < 0)
                 {
-                    row.Delete(); // elimina del DataTable
-                    return true;
+                    MessageBox.Show("Stock inválido (debe ser un número >= 0).", "Error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
                 }
 
-                MessageBox.Show("No se pudo eliminar en BD (¿referenciado en ventas?).",
-                    "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return false;
+                if (id == 0)
+                {
+                    var newProduct = new Product { Nombre = nombre, Precio = precioVal, Stock = stockVal };
+                    int newId = await _productRepo.InsertAsync(newProduct);
+                    row.Cells["Id"].Value = newId;
+                    row.Tag = newProduct;
+                    MessageBox.Show($"Producto creado exitosamente. ID: {newId}", "Éxito",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    var product = new Product { Id = id, Nombre = nombre, Precio = precioVal, Stock = stockVal };
+                    bool success = await _productRepo.UpdateAsync(product);
+                    if (!success)
+                    {
+                        MessageBox.Show("Error al actualizar el producto.", "Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    row.Tag = product;
+                    MessageBox.Show("Producto actualizado exitosamente.", "Éxito",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error al eliminar: " + ex.Message,
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return false;
+                MessageBox.Show($"Error al guardar: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-            finally
+        }
+
+        private async void DgvProducts_UserDeletingRow(object sender, DataGridViewRowCancelEventArgs e)
+        {
+            try
             {
-                _persisting = false;
+                if (e.Row?.Cells["Id"].Value == null) return;
+                int id = Convert.ToInt32(e.Row.Cells["Id"].Value);
+
+                var result = MessageBox.Show($"¿Eliminar el producto ID {id}?", "Confirmar",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+                if (result == DialogResult.Yes)
+                {
+                    bool success = await _productRepo.DeleteAsync(id);
+                    if (!success)
+                    {
+                        MessageBox.Show("No se pudo eliminar el producto.", "Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        e.Cancel = true;
+                    }
+                }
+                else
+                {
+                    e.Cancel = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al eliminar: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        // ================================
-        // Helpers
-        // ================================
-        private static bool IsValidRow(DataRow r)
-            => !IsNullOrEmpty(r, "nombre") && TryGetDecimal(r, "precio", out _) && TryGetInt(r, "stock", out _);
-
-        private static bool IsNullOrEmpty(DataRow r, string col)
-            => !r.Table.Columns.Contains(col) || r[col] == DBNull.Value || string.IsNullOrWhiteSpace(r[col]?.ToString());
-
-        private static bool IsNullOrZero(DataRow r, string col)
+        private void DgvProducts_CellValidating(object sender, DataGridViewCellValidatingEventArgs e)
         {
-            if (!r.Table.Columns.Contains(col) || r[col] == DBNull.Value) return true;
-            var s = r[col].ToString();
-            if (decimal.TryParse(s, out var d)) return d == 0m;
-            if (int.TryParse(s, out var i)) return i == 0;
-            return true;
+            if (e.RowIndex < 0) return;
+
+            string columnName = dgvProducts.Columns[e.ColumnIndex].Name;
+            string value = e.FormattedValue?.ToString() ?? "";
+
+            if (columnName == "Nombre" && string.IsNullOrWhiteSpace(value))
+            {
+                e.Cancel = true;
+                dgvProducts.Rows[e.RowIndex].ErrorText = "Nombre obligatorio";
+            }
+            else if ((columnName == "Precio" || columnName == "Stock") &&
+                     (!decimal.TryParse(value, out decimal num) || num < 0))
+            {
+                e.Cancel = true;
+                dgvProducts.Rows[e.RowIndex].ErrorText = "Debe ser >= 0";
+            }
+            else
+            {
+                dgvProducts.Rows[e.RowIndex].ErrorText = "";
+            }
         }
 
-        private static bool TryGetDecimal(DataRow r, string col, out decimal value)
+        // Apartado de colores y eso
+        private void AplicarEstilosVisuales()
         {
-            value = 0m;
-            if (!r.Table.Columns.Contains(col) || r[col] == DBNull.Value) return false;
-            return decimal.TryParse(r[col].ToString(), out value);
+            this.BackColor = Color.FromArgb(245, 245, 245);
+            this.Text = "Gestión de Productos";
+            this.StartPosition = FormStartPosition.CenterScreen;
+
+            label1.Font = new Font("Segoe UI", 22, FontStyle.Bold);
+            label1.ForeColor = Color.FromArgb(52, 73, 94);
+            label1.TextAlign = ContentAlignment.MiddleCenter;
+            label1.Left = (this.ClientSize.Width - label1.Width) / 2;
+
+            dgvProducts.BorderStyle = BorderStyle.None;
+            dgvProducts.BackgroundColor = Color.White;
+            dgvProducts.GridColor = Color.FromArgb(220, 220, 220);
+            dgvProducts.RowHeadersVisible = false;
+            dgvProducts.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvProducts.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvProducts.MultiSelect = false;
+
+            dgvProducts.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(41, 128, 185);
+            dgvProducts.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            dgvProducts.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 11, FontStyle.Bold);
+            dgvProducts.EnableHeadersVisualStyles = false;
+
+            dgvProducts.DefaultCellStyle.Font = new Font("Segoe UI", 10);
+            dgvProducts.DefaultCellStyle.BackColor = Color.White;
+            dgvProducts.DefaultCellStyle.ForeColor = Color.FromArgb(44, 62, 80);
+            dgvProducts.DefaultCellStyle.SelectionBackColor = Color.FromArgb(52, 152, 219);
+            dgvProducts.DefaultCellStyle.SelectionForeColor = Color.White;
+
+            dgvProducts.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 247, 250);
+            dgvProducts.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
         }
-
-        private static bool TryGetInt(DataRow r, string col, out int value)
-        {
-            value = 0;
-            if (!r.Table.Columns.Contains(col) || r[col] == DBNull.Value) return false;
-            return int.TryParse(r[col].ToString(), out value);
-        }
-
-        private static int ToInt(object? o)
-            => o == null || o == DBNull.Value ? 0 : int.TryParse(o.ToString(), out var i) ? i : 0;
-
-        private static decimal ToDecimal(object? o)
-            => o == null || o == DBNull.Value ? 0m : decimal.TryParse(o.ToString(), out var d) ? d : 0m;
-
     }
-
 }

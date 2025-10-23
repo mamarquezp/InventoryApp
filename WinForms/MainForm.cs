@@ -1,4 +1,5 @@
-﻿using InventoryApp.Repositories;
+﻿
+using InventoryApp.Repositories;
 using InventoryApp.Services;
 
 namespace InventoryApp.WinForms

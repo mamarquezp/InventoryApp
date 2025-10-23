@@ -28,60 +28,79 @@
         /// </summary>
         private void InitializeComponent()
         {
-            panel1 = new Panel();
-            label_productos = new Label();
-            dataGridProducts = new DataGridView();
-            panel1.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)dataGridProducts).BeginInit();
+            dgvProducts = new DataGridView();
+            Id = new DataGridViewTextBoxColumn();
+            Nombre = new DataGridViewTextBoxColumn();
+            Precio = new DataGridViewTextBoxColumn();
+            Stock = new DataGridViewTextBoxColumn();
+            label1 = new Label();
+            ((System.ComponentModel.ISupportInitialize)dgvProducts).BeginInit();
             SuspendLayout();
             // 
-            // panel1
+            // dgvProducts
             // 
-            panel1.BackColor = Color.White;
-            panel1.Controls.Add(label_productos);
-            panel1.Controls.Add(dataGridProducts);
-            panel1.Location = new Point(3, 2);
-            panel1.Name = "panel1";
-            panel1.Size = new Size(1136, 596);
-            panel1.TabIndex = 0;
+            dgvProducts.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dgvProducts.Columns.AddRange(new DataGridViewColumn[] { Id, Nombre, Precio, Stock });
+            dgvProducts.Location = new Point(12, 101);
+            dgvProducts.Name = "dgvProducts";
+            dgvProducts.Size = new Size(1114, 486);
+            dgvProducts.TabIndex = 0;
             // 
-            // label_productos
+            // Id
             // 
-            label_productos.AutoSize = true;
-            label_productos.Font = new Font("Segoe UI", 27.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            label_productos.Location = new Point(22, 25);
-            label_productos.Name = "label_productos";
-            label_productos.Size = new Size(189, 50);
-            label_productos.TabIndex = 4;
-            label_productos.Text = "Productos";
+            Id.HeaderText = "ID";
+            Id.Name = "Id";
+            Id.ReadOnly = true;
             // 
-            // dataGridProducts
+            // Nombre
             // 
-            dataGridProducts.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dataGridProducts.Location = new Point(0, 188);
-            dataGridProducts.Name = "dataGridProducts";
-            dataGridProducts.Size = new Size(1133, 396);
-            dataGridProducts.TabIndex = 0;
+            Nombre.HeaderText = "Nombre";
+            Nombre.Name = "Nombre";
+            // 
+            // Precio
+            // 
+            Precio.HeaderText = "Precio";
+            Precio.Name = "Precio";
+            // 
+            // Stock
+            // 
+            Stock.HeaderText = "Stock";
+            Stock.Name = "Stock";
+            // 
+            // label1
+            // 
+            label1.AutoSize = true;
+            label1.Font = new Font("Times New Roman", 26.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            label1.Location = new Point(68, 27);
+            label1.Name = "label1";
+            label1.Size = new Size(158, 40);
+            label1.TabIndex = 1;
+            label1.Text = "Productos";
             // 
             // ProductsInlineForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1140, 598);
-            Controls.Add(panel1);
+            ClientSize = new Size(1138, 599);
+            Controls.Add(label1);
+            Controls.Add(dgvProducts);
             Name = "ProductsInlineForm";
-            Text = "ProductsInlineForm";
+            Text = "Form1";
+
             Load += ProductsInlineForm_Load;
-            panel1.ResumeLayout(false);
-            panel1.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)dataGridProducts).EndInit();
+
+            ((System.ComponentModel.ISupportInitialize)dgvProducts).EndInit();
             ResumeLayout(false);
+            PerformLayout();
         }
 
         #endregion
 
-        private Panel panel1;
-        private DataGridView dataGridProducts;
-        private Label label_productos;
+        private DataGridView dgvProducts;
+        private DataGridViewTextBoxColumn Id;
+        private DataGridViewTextBoxColumn Nombre;
+        private DataGridViewTextBoxColumn Precio;
+        private DataGridViewTextBoxColumn Stock;
+        private Label label1;
     }
 }

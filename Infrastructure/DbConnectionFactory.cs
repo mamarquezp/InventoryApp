@@ -1,4 +1,5 @@
-﻿using MySql.Data.MySqlClient;
+﻿
+using MySql.Data.MySqlClient;
 
 namespace InventoryApp.Infrastructure
 {
@@ -11,7 +12,7 @@ namespace InventoryApp.Infrastructure
 
         // Ajusta tu cadena. Ideal: léela de app.config/user-secrets.
         private readonly string _connString =
-            "Server=localhost;Port=3306;Database=inventario_db;Uid=root;Pwd=MiUSPG2025;SslMode=Required;TlsVersion=Tls12,Tls13;";
+            "Server=localhost;Port=3306;Database=inventario_db;Uid=root;Pwd=mar41662137;SslMode=none;";
 
         private DbConnectionFactory() { }
 

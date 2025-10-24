@@ -31,6 +31,7 @@ namespace InventoryApp.WinForms
             dgvClients = new DataGridView();
             Id = new DataGridViewTextBoxColumn();
             Nombre = new DataGridViewTextBoxColumn();
+            Nit = new DataGridViewTextBoxColumn();
             Correo = new DataGridViewTextBoxColumn();
             Telefono = new DataGridViewTextBoxColumn();
             Direccion = new DataGridViewTextBoxColumn();
@@ -41,7 +42,7 @@ namespace InventoryApp.WinForms
             // dgvClients
             // 
             dgvClients.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvClients.Columns.AddRange(new DataGridViewColumn[] { Id, Nombre, Correo, Telefono, Direccion });
+            dgvClients.Columns.AddRange(new DataGridViewColumn[] { Id, Nombre, Nit, Correo, Telefono, Direccion });
             dgvClients.Location = new Point(12, 101);
             dgvClients.Name = "dgvClients";
             dgvClients.Size = new Size(1114, 486);
@@ -58,7 +59,13 @@ namespace InventoryApp.WinForms
             // 
             Nombre.HeaderText = "Nombre Completo";
             Nombre.Name = "Nombre";
-            Nombre.Width = 200;
+            Nombre.Width = 200; 
+            // 
+            // Nit  
+            // 
+            Nit.HeaderText = "NIT";
+            Nit.Name = "Nit";
+            Nit.Width = 100;
             // 
             // Correo
             // 
@@ -114,6 +121,7 @@ namespace InventoryApp.WinForms
         private DataGridViewTextBoxColumn Telefono;
         private DataGridViewTextBoxColumn Direccion;
         private Label label1;
+        private DataGridViewTextBoxColumn Nit;
     }
 }
 

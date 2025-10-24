@@ -2,6 +2,7 @@ using InventoryApp.Domain;
 using InventoryApp.Repositories;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using MySql.Data.MySqlClient;
 
 namespace InventoryApp.WinForms
 {
@@ -37,6 +38,7 @@ namespace InventoryApp.WinForms
                     int rowIndex = dgvClients.Rows.Add(
                         client.Id,
                         client.Nombre,
+                        client.Nit,
                         client.Correo,
                         client.Telefono,
                         client.Direccion
@@ -105,7 +107,7 @@ namespace InventoryApp.WinForms
 
                 int id = Convert.ToInt32(row.Cells["Id"].Value);
                 string nombre = row.Cells["Nombre"].Value?.ToString() ?? "";
-                
+
                 var result = MessageBox.Show($"¿Eliminar el cliente '{nombre}' (ID {id})?",
                     "Confirmar eliminación", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 
@@ -126,6 +128,19 @@ namespace InventoryApp.WinForms
                                 MessageBoxButtons.OK, MessageBoxIcon.Error);
                         }
                     }
+                    catch (MySqlException myEx) 
+                    {
+                        if (myEx.Number == 1451) // Error de Foreign Key
+                        {
+                            MessageBox.Show($"No se puede eliminar al cliente '{nombre}'.\nEl cliente ya tiene ventas registradas.", "Acción Denegada",
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        }
+                        else
+                        {
+                            MessageBox.Show($"Error de base de datos: {myEx.Message}", "Error",
+                                MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
                     catch (Exception ex)
                     {
                         MessageBox.Show($"Error al eliminar: {ex.Message}", "Error",
@@ -137,72 +152,71 @@ namespace InventoryApp.WinForms
 
         private async void DgvClients_CellEndEdit(object sender, DataGridViewCellEventArgs e)
         {
+            if (e.RowIndex < 0) return;
+
+            DataGridViewRow row = dgvClients.Rows[e.RowIndex];
+
+            if (row.IsNewRow) return;
+
             try
             {
-                if (e.RowIndex < 0) return;
-                var row = dgvClients.Rows[e.RowIndex];
-                if (row.IsNewRow) return;
+                // Limpiar el error de la fila (de CellValidating)
+                row.ErrorText = "";
 
+                // Leemos todos los valores de la fila
                 var id = Convert.ToInt32(row.Cells["Id"].Value ?? 0);
                 var nombre = row.Cells["Nombre"].Value?.ToString() ?? "";
+                var nit = row.Cells["Nit"].Value?.ToString() ?? "";
                 var correo = row.Cells["Correo"].Value?.ToString() ?? "";
                 var telefono = row.Cells["Telefono"].Value?.ToString() ?? "";
                 var direccion = row.Cells["Direccion"].Value?.ToString() ?? "";
 
-                // Validaciones
-                if (string.IsNullOrWhiteSpace(nombre))
+                if (string.IsNullOrWhiteSpace(nombre) ||
+                    string.IsNullOrWhiteSpace(nit) ||
+                    string.IsNullOrWhiteSpace(correo))
                 {
-                    MessageBox.Show("El nombre es obligatorio.", "Error",
-                        MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-
-                if (string.IsNullOrWhiteSpace(correo))
-                {
-                    MessageBox.Show("El correo electrónico es obligatorio.", "Error",
-                        MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
+                    return; 
                 }
 
                 if (!EmailRegex.IsMatch(correo))
                 {
-                    MessageBox.Show("El formato del correo electrónico no es válido.", "Error",
+                    MessageBox.Show("El formato del correo electrónico no es válido.", "Error de Formato",
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+                    dgvClients.CurrentCell = row.Cells["Correo"];
+                    dgvClients.BeginEdit(true);
                     return;
                 }
-
                 if (id == 0)
                 {
-                    // Crear nuevo cliente
-                    var newClient = new Client 
-                    { 
-                        Nombre = nombre, 
-                        Correo = correo, 
-                        Telefono = telefono, 
+                    var newClient = new Client
+                    {
+                        Nombre = nombre,
+                        Correo = correo,
+                        Telefono = telefono,
                         Direccion = direccion,
-                        Nit = "" // Campo heredado, se puede dejar vacío o solicitar
+                        Nit = nit
                     };
-                    
+
                     int newId = await _clientRepo.InsertAsync(newClient);
 
                     MessageBox.Show($"Cliente creado exitosamente. ID: {newId}", "Éxito",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                    await LoadClientsAsync(); // Recargamos el grid para reflejar el nuevo cliente
+                    await LoadClientsAsync(); // Recargamos el grid
                 }
                 else
                 {
-                    // Actualizar cliente existente
-                    var client = new Client 
-                    { 
-                        Id = id, 
-                        Nombre = nombre, 
-                        Correo = correo, 
-                        Telefono = telefono, 
+                    var client = new Client
+                    {
+                        Id = id,
+                        Nombre = nombre,
+                        Correo = correo,
+                        Telefono = telefono,
                         Direccion = direccion,
-                        Nit = "" // Mantener el NIT existente o manejarlo según necesidad
+                        Nit = nit
                     };
-                    
+
                     bool success = await _clientRepo.UpdateAsync(client);
                     if (!success)
                     {
@@ -216,15 +230,31 @@ namespace InventoryApp.WinForms
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
-            catch (ArgumentException argEx)
+            catch (ArgumentException argEx) // Captura validaciones del Repositorio
             {
                 MessageBox.Show(argEx.Message, "Error de validación",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al guardar: {ex.Message}", "Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                string nitVal = row.Cells["Nit"].Value?.ToString() ?? "vacío";
+                string correoVal = row.Cells["Correo"].Value?.ToString() ?? "vacío";
+
+                if (ex.Message.Contains("Duplicate entry") && ex.Message.Contains("uk_cliente_nit"))
+                {
+                    MessageBox.Show($"Error al guardar: Ya existe un cliente con el NIT '{nitVal}'.", "NIT Duplicado",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                else if (ex.Message.Contains("Duplicate entry")) // Asumiendo que correo también sea unique
+                {
+                    MessageBox.Show($"Error al guardar: Ya existe un cliente con el correo '{correoVal}'.", "Correo Duplicado",
+                       MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                else
+                {
+                    MessageBox.Show($"Error al guardar: {ex.Message}", "Error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
 
@@ -269,31 +299,15 @@ namespace InventoryApp.WinForms
             string columnName = dgvClients.Columns[e.ColumnIndex].Name;
             string value = e.FormattedValue?.ToString() ?? "";
 
-            if (columnName == "Nombre" && string.IsNullOrWhiteSpace(value))
+            dgvClients.Rows[e.RowIndex].ErrorText = ""; // Limpiar error previo
+
+            if (columnName == "Correo")
             {
-                e.Cancel = true;
-                dgvClients.Rows[e.RowIndex].ErrorText = "Nombre obligatorio";
-            }
-            else if (columnName == "Correo")
-            {
-                if (string.IsNullOrWhiteSpace(value))
-                {
-                    e.Cancel = true;
-                    dgvClients.Rows[e.RowIndex].ErrorText = "Correo obligatorio";
-                }
-                else if (!EmailRegex.IsMatch(value))
+                if (!string.IsNullOrWhiteSpace(value) && !EmailRegex.IsMatch(value))
                 {
                     e.Cancel = true;
                     dgvClients.Rows[e.RowIndex].ErrorText = "Formato de correo inválido";
                 }
-                else
-                {
-                    dgvClients.Rows[e.RowIndex].ErrorText = "";
-                }
-            }
-            else
-            {
-                dgvClients.Rows[e.RowIndex].ErrorText = "";
             }
         }
 

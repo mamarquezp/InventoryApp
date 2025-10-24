@@ -26,6 +26,7 @@ namespace InventoryApp.WinForms
         {
             try
             {
+                dgvProducts.EndEdit();
                 dgvProducts.Rows.Clear();
                 var products = await _productRepo.GetAllAsync();
                 foreach (var product in products)
@@ -123,12 +124,16 @@ namespace InventoryApp.WinForms
 
         private async void DgvProducts_CellEndEdit(object sender, DataGridViewCellEventArgs e)
         {
+            if (e.RowIndex < 0) return;
+            var row = dgvProducts.Rows[e.RowIndex];
+
+            if (row.IsNewRow && row.Cells["Nombre"].Value == null) return;
+
             try
             {
-                if (e.RowIndex < 0) return;
-                var row = dgvProducts.Rows[e.RowIndex];
-                if (row.IsNewRow) return;
+                row.ErrorText = ""; // Limpiar error de validación
 
+                // Leemos todos los valores de la fila
                 var id = Convert.ToInt32(row.Cells["Id"].Value ?? 0);
                 var nombre = row.Cells["Nombre"].Value?.ToString() ?? "";
                 var precioStr = row.Cells["Precio"].Value?.ToString();
@@ -138,20 +143,24 @@ namespace InventoryApp.WinForms
                     string.IsNullOrWhiteSpace(precioStr) ||
                     string.IsNullOrWhiteSpace(stockStr))
                 {
-                    return;
+                    return; 
                 }
 
                 if (!decimal.TryParse(precioStr, out decimal precioVal) || precioVal < 0)
                 {
-                    MessageBox.Show("Precio inválido (debe ser un número >= 0).", "Error",
+                    MessageBox.Show("Precio inválido (debe ser un número >= 0).", "Error de Formato",
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    dgvProducts.CurrentCell = row.Cells["Precio"]; // enfocar celda
+                    dgvProducts.BeginEdit(true);
                     return;
                 }
 
                 if (!int.TryParse(stockStr, out int stockVal) || stockVal < 0)
                 {
-                    MessageBox.Show("Stock inválido (debe ser un número >= 0).", "Error",
+                    MessageBox.Show("Stock inválido (debe ser un número >= 0).", "Error de Formato",
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    dgvProducts.CurrentCell = row.Cells["Stock"]; // enfocar celda
+                    dgvProducts.BeginEdit(true);
                     return;
                 }
 
@@ -163,10 +172,11 @@ namespace InventoryApp.WinForms
                     MessageBox.Show($"Producto creado exitosamente. ID: {newId}", "Éxito",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                    await LoadProductsAsync(); // Recargamos el grid para reflejar el nuevo producto
+                    await LoadProductsAsync();
                 }
                 else
                 {
+                    // Actualizar
                     var product = new Product { Id = id, Nombre = nombre, Precio = precioVal, Stock = stockVal };
                     bool success = await _productRepo.UpdateAsync(product);
                     if (!success)
@@ -223,24 +233,20 @@ namespace InventoryApp.WinForms
         private void DgvProducts_CellValidating(object sender, DataGridViewCellValidatingEventArgs e)
         {
             if (e.RowIndex < 0) return;
-
+            var row = dgvProducts.Rows[e.RowIndex];
             string columnName = dgvProducts.Columns[e.ColumnIndex].Name;
             string value = e.FormattedValue?.ToString() ?? "";
 
-            if (columnName == "Nombre" && string.IsNullOrWhiteSpace(value))
+            row.ErrorText = ""; // Limpiar error previo
+
+            if (columnName == "Precio" || columnName == "Stock")
             {
-                e.Cancel = true;
-                dgvProducts.Rows[e.RowIndex].ErrorText = "Nombre obligatorio";
-            }
-            else if ((columnName == "Precio" || columnName == "Stock") &&
-                     (!decimal.TryParse(value, out decimal num) || num < 0))
-            {
-                e.Cancel = true;
-                dgvProducts.Rows[e.RowIndex].ErrorText = "Debe ser >= 0";
-            }
-            else
-            {
-                dgvProducts.Rows[e.RowIndex].ErrorText = "";
+                if (!string.IsNullOrWhiteSpace(value) &&
+                    (!decimal.TryParse(value, out decimal num) || num < 0))
+                {
+                    e.Cancel = true;
+                    row.ErrorText = "Debe ser un número >= 0";
+                }
             }
         }
 

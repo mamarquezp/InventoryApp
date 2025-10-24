@@ -159,10 +159,11 @@ namespace InventoryApp.WinForms
                 {
                     var newProduct = new Product { Nombre = nombre, Precio = precioVal, Stock = stockVal };
                     int newId = await _productRepo.InsertAsync(newProduct);
-                    row.Cells["Id"].Value = newId;
-                    row.Tag = newProduct;
+
                     MessageBox.Show($"Producto creado exitosamente. ID: {newId}", "Éxito",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                    await LoadProductsAsync(); // Recargamos el grid para reflejar el nuevo producto
                 }
                 else
                 {

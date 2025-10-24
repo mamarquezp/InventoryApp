@@ -24,7 +24,7 @@ namespace InventoryApp
             var salesService = new SalesService(productRepo, saleRepo);
 
             // 🔹 Ejecutar el formulario principal pasando las dependencias
-            Application.Run(new MainForm(productRepo, clientRepo, salesService));
+            Application.Run(new MainForm(productRepo, clientRepo, salesService, saleRepo));
         }
     }
 }

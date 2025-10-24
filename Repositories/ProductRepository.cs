@@ -12,7 +12,7 @@ namespace InventoryApp.Repositories
         {
             var list = new List<Product>();
             using var con = DbConnectionFactory.Instance.CreateOpen();
-            using var cmd = new MySqlCommand("SELECT id, nombre, precio, stock FROM producto ORDER BY nombre", con);
+            using var cmd = new MySqlCommand("SELECT id, nombre, precio, stock FROM producto ORDER BY id", con);
             using var rd = await cmd.ExecuteReaderAsync();
             while (await rd.ReadAsync())
             {

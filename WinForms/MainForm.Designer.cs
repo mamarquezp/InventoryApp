@@ -29,10 +29,10 @@
         private void InitializeComponent()
         {
             panel1 = new Panel();
+            btnVerVentas = new Button();
+            btnClientes = new Button();
             btnVentas = new Button();
             btnProductos = new Button();
-            btnClientes = new Button();
-            btnVerVentas = new Button();
             panel1.SuspendLayout();
             SuspendLayout();
             // 
@@ -43,16 +43,39 @@
             panel1.Controls.Add(btnClientes);
             panel1.Controls.Add(btnVentas);
             panel1.Controls.Add(btnProductos);
-            panel1.Location = new Point(2, 3);
+            panel1.Location = new Point(3, 5);
+            panel1.Margin = new Padding(4, 5, 4, 5);
             panel1.Name = "panel1";
-            panel1.Size = new Size(1064, 558);
+            panel1.Size = new Size(1520, 930);
             panel1.TabIndex = 0;
+            // 
+            // btnVerVentas
+            // 
+            btnVerVentas.Location = new Point(567, 468);
+            btnVerVentas.Margin = new Padding(4, 5, 4, 5);
+            btnVerVentas.Name = "btnVerVentas";
+            btnVerVentas.Size = new Size(420, 162);
+            btnVerVentas.TabIndex = 3;
+            btnVerVentas.Text = "VISUALIZAR VENTAS";
+            btnVerVentas.UseVisualStyleBackColor = true;
+            btnVerVentas.Click += btnVerVentas_Click;
+            // 
+            // btnClientes
+            // 
+            btnClientes.Location = new Point(567, 217);
+            btnClientes.Margin = new Padding(4, 5, 4, 5);
+            btnClientes.Name = "btnClientes";
+            btnClientes.Size = new Size(420, 162);
+            btnClientes.TabIndex = 2;
+            btnClientes.Text = "CLIENTES";
+            btnClientes.UseVisualStyleBackColor = true;
             // 
             // btnVentas
             // 
-            btnVentas.Location = new Point(727, 130);
+            btnVentas.Location = new Point(1039, 217);
+            btnVentas.Margin = new Padding(4, 5, 4, 5);
             btnVentas.Name = "btnVentas";
-            btnVentas.Size = new Size(294, 97);
+            btnVentas.Size = new Size(420, 162);
             btnVentas.TabIndex = 1;
             btnVentas.Text = "REGISTRAR VENTAS";
             btnVentas.UseVisualStyleBackColor = true;
@@ -60,38 +83,22 @@
             // 
             // btnProductos
             // 
-            btnProductos.Location = new Point(69, 130);
+            btnProductos.Location = new Point(99, 217);
+            btnProductos.Margin = new Padding(4, 5, 4, 5);
             btnProductos.Name = "btnProductos";
-            btnProductos.Size = new Size(294, 97);
+            btnProductos.Size = new Size(420, 162);
             btnProductos.TabIndex = 0;
             btnProductos.Text = "PRODUCTOS";
             btnProductos.UseVisualStyleBackColor = true;
             btnProductos.Click += btnProductos_Click;
             // 
-            // btnClientes
-            // 
-            btnClientes.Location = new Point(397, 130);
-            btnClientes.Name = "btnClientes";
-            btnClientes.Size = new Size(294, 97);
-            btnClientes.TabIndex = 2;
-            btnClientes.Text = "CLIENTES";
-            btnClientes.UseVisualStyleBackColor = true;
-            // 
-            // btnVerVentas
-            // 
-            btnVerVentas.Location = new Point(397, 281);
-            btnVerVentas.Name = "btnVerVentas";
-            btnVerVentas.Size = new Size(294, 97);
-            btnVerVentas.TabIndex = 3;
-            btnVerVentas.Text = "VISUALIZAR VENTAS";
-            btnVerVentas.UseVisualStyleBackColor = true;
-            // 
             // MainForm
             // 
-            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleDimensions = new SizeF(10F, 25F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1064, 562);
+            ClientSize = new Size(1520, 937);
             Controls.Add(panel1);
+            Margin = new Padding(4, 5, 4, 5);
             Name = "MainForm";
             Text = "MainForm";
             panel1.ResumeLayout(false);

@@ -1,0 +1,53 @@
+USE inventario_db;
+
+-- Agregar columna correo si no existe
+SET @col_exists = 0;
+SELECT COUNT(*) INTO @col_exists 
+FROM INFORMATION_SCHEMA.COLUMNS 
+WHERE TABLE_SCHEMA = 'inventario_db' 
+  AND TABLE_NAME = 'cliente' 
+  AND COLUMN_NAME = 'correo';
+
+SET @query = IF(@col_exists = 0,
+    'ALTER TABLE cliente ADD COLUMN correo VARCHAR(100) NOT NULL DEFAULT ''''',
+    'SELECT ''La columna correo ya existe'' AS mensaje');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Agregar columna telefono si no existe
+SET @col_exists = 0;
+SELECT COUNT(*) INTO @col_exists 
+FROM INFORMATION_SCHEMA.COLUMNS 
+WHERE TABLE_SCHEMA = 'inventario_db' 
+  AND TABLE_NAME = 'cliente' 
+  AND COLUMN_NAME = 'telefono';
+
+SET @query = IF(@col_exists = 0,
+    'ALTER TABLE cliente ADD COLUMN telefono VARCHAR(20) NOT NULL DEFAULT ''''',
+    'SELECT ''La columna telefono ya existe'' AS mensaje');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Agregar columna direccion si no existe
+SET @col_exists = 0;
+SELECT COUNT(*) INTO @col_exists 
+FROM INFORMATION_SCHEMA.COLUMNS 
+WHERE TABLE_SCHEMA = 'inventario_db' 
+  AND TABLE_NAME = 'cliente' 
+  AND COLUMN_NAME = 'direccion';
+
+SET @query = IF(@col_exists = 0,
+    'ALTER TABLE cliente ADD COLUMN direccion VARCHAR(200) NOT NULL DEFAULT ''''',
+    'SELECT ''La columna direccion ya existe'' AS mensaje');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Verificar la estructura actualizada de la tabla
+DESCRIBE cliente;
+
+-- Mensaje de confirmación
+SELECT 'Tabla cliente actualizada correctamente con los campos: correo, telefono, direccion' AS resultado;
+

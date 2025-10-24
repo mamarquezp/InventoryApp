@@ -10,7 +10,7 @@ namespace InventoryApp.Infrastructure
 
         public static DbConnectionFactory Instance => _instance.Value;
 
-        // Ajusta tu cadena. Ideal: léela de app.config/user-secrets.
+        // Ajusta tu cadena. Ideal: léela de app.config/user-secrets. 
         private readonly string _connString =
             "Server=localhost;Port=3306;Database=inventario_db;Uid=root;Pwd=MiUSPG2025;SslMode=none;";
 
